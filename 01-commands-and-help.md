@@ -23,7 +23,8 @@ Findet die Bedeutung der folgenden Optionen von `ls` mit Hilfe der Manpage herau
 ```
 Probiert die Optionen natürlich auch aus! Dazu macht es vielleicht Sinn, sich den Inhalt eines Verzeichnisses mit vielen Einträgen anzeigen zu lassen, z.B. mit `ls /etc`. 
 
->[!NOTE] Einige Optionen machen alleine für sich keinen Sinn, z.B. die Option `-d`. Kombiniert sie vielleicht mal mit einem `-l`... Kombiniert generell mal mehrere Optionen miteinander.
+>[!NOTE]
+> Einige Optionen machen alleine für sich keinen Sinn, z.B. die Option `-d`. Kombiniert sie vielleicht mal mit einem `-l`... Kombiniert generell mal mehrere Optionen miteinander.
 
 Findet heraus, was die einzelnen Optionen von `ls` bewirken:
 ```
