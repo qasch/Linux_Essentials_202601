@@ -266,7 +266,247 @@ Sonderzeichen können durch das sogenannte *Escaping* oder *Maskieren* bzw. *Quo
 
 Zum Maskieren gibt es drei verschiedene Wege:
 
-## Escaping / Maskieren von Sonderzeichen
+1. Maskieren mit dem Backslash `\`: Der Backslash maskiert (nur) das **direkt darauffolgende** Zeichen
+
+2. Maskieren mit **einfachen Hochkommata** `'`: Einfache Hochkommata maskieren **jedes** in ihnen eingeschlossene Zeichen.
+
+3. Maskieren mit **doppelten Hochkommata** `"`: Doppelte Hochkommata maskieren **fast** alle in ihnen eingeschlossene Zeichen, nicht aber
+
+- `$` (Dollar) - Variablensubstitution funktioniert weiterhin
+- `` ` `` (Backticks) - Kommandosubstitution funktioniert weiterhin
+- `\` (Backslash) - behält seine Escape-Funktion
+- `!` (Ausrufezeichen) - History Expansion in bash (je nach Einstellung)
+
+## Variablen
+
+### Umgebungsvariablen / Environment Variables
+
+Sind systemweit gültig, enthalten wichtige Informationen, damit unser System wie gewünscht funktioniert, bestimmte Kommandos greifen auf diese Variablen zurück. Umgebungsvariablen werden nach Konvention komplett in Grossbuchstaben geschrieben.
+
+Einige Beispiele:
+```bash
+$HOME       # Heimatverzeichnis des aktuellen Benutzers
+$PWD        # absoluter Pfad des aktuellen Verzeichnisses
+$USER       # Login Name des aktuellen Benutzers
+$SHELL      # Shell des aktuellen Benutzers
+$PATH       # Liste der Verzeichnisse, die nach ausführbaren Dateien durchsucht werden, so dass wir diese ohne eine Pfadangabe aufrufen können
+```
+Systemvariablen können unterschiedliche Werte enthalten, je nachdem welcher Benutzer angemeldet ist. 
+
+#### PATH-Variable
+
+Eine besonders wichtige Umgebungsvariable ists die PATH-Variable. Sie enthält eine durch Doppelpunkte `:` getrennte Liste von Verzeichnissen, die **der Reihenfolge nach** von der Shell durchsucht werden, wenn ein Kommando eingegeben wird. Sobald das entsprechende Kommando gefunden wird, beendet die Shell die Suche und führt dieses Kommando aus. 
+
+So ist es möglich, ein Kommando auszuführen, ohne den Pfad (absolut oder relativ) dorthin angeben zu müssen.
+
+##### PATH erweitern
+Unter gewissen Umständen möchten wir die PATH-Variable um ein weiteres Verzeichnis erweitern. Zum Beispiel haben wir ein Skript erstellt und wollen es ohne Pfadangabe ausführen können. Dann können wir das Verzeichnis in dem das Skript liegt, dieser Variable hinzufügen. Hier ist die Reihenfolge wichtig, vor allem falls das Skript genauso heisst wie ein bereits existierendes Programm. 
+
+Wir denken hier an unser Beispiel mit dem Skritp `rm` für den Papierkorb. Dieses Skript haben wir im Verzeichnis `~/bin` abgelegt und wollen, dass es anstatt des eingebauten Kommandos `/usr/bin/rm` ausgeführt wird. Wir erweitern `PATH` also wie folgt:
+```bash
+echo $PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+
+export PATH="$PATH:~/bin"
+
+echo $PATH=/home/tux/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games/opt/meinprogramm/bin
+```
+### Shellvariablen / Shell Variables
+
+Sind nur gültig in der aktuellen Shell, können vom Benutzer selbst definiert werden. Werden **nicht** automatisch in Subshells vererbt, es sei denn sie werden mit dem Kommando `export` exportiert.
+```bash
+foo=bar         # weist der Variablen foo den Wert bar zu
+export foo      # macht die Variable foo auch in Subshells gültig
+export hallo=huhu # weist der Variablen hallo den Wert huhu zu und macht diese in Subshells gültig
+```
+### Variablensubstitution
+
+Bei der Variablensubstitution wird der Name der Variablen mit dem in ihr hinterlegten Wert ersetzt.
+
+```bash
+echo $foo       # gibt den Wert der Variablen foo aus
+echo ${foo}     # gibt den Wert der Variablen foo aus
+```
+### Kommandosubstitution
+
+TODO
+
+#### Subshells
+
+Innerhalb einer laufenden Shell können weitere Shells gestartet werden. Dies sind sogenannte *Subshells* oder *Kindshells*. Diese können entweder aktiv, z.B. durch die Eingabe des Kommandos `bash` gestartet werden. 
+
+Subshells sind separate Instanzen der Shell, die von der Hauptshell gestartet werden. Sie sind ein fundamentales Konzept in Linux/Unix-Systemen.
+
+Subshells werden aber auch oft gestartet, ohne dass wir dies merken.
+
+Z.B. werden Kommandos, Funktionen, Skripte in Subshells ausgeführt, auch wenn wir davon direkt gar nichts mitbekommen. Auch Pipes und runde Klammern `()` erzeugen Subshells. 
+
+Es ist wichtig zu wissen, dass z.B. Aliase und Variablen **nicht** automatisch in Subshells vererbt werden!
+
+Auch beim Wechsel in einen anderen Benutzeraccount wird eine Subshell mit den Berechtigungen dieses Benutzers gestartet.
+
+Wir können uns einen Überblick über die momentan laufenden Shells bzw. Subshells mit dem Kommando `ps` verschaffen, oder in der BASH über die Variable `BASH_SUBSHELL`
+```
+echo $BASH_SUBSHELL   # zeigt 0 in Hauptshell, >0 in Subshells
+(echo $BASH_SUBSHELL) # zeigt 1
+```
+##### Eigenschaften von Subshells
+**Vererbung**:
+
+- **Umgebungs**variablen werden vererbt (als **Kopie**)
+- Funktionen werden vererbt
+- Arbeitsverzeichnis wird vererbt
+
+**Isolation**:
+
+- Änderungen in der Subshell beeinflussen die Parent-Shell **nicht**
+- (neue) Shellvariablen werden nicht vererbt/sind nicht sichtbar
+- `cd` in einer Subshell ändert nicht das Verzeichnis der Parent-Shell
+
+##### Praktische Beispiele
+###### Variablen-Isolation
+```
+var="parent"
+(var="child"; echo "In Subshell: $var")
+echo "In Parent-Shell: $var"
+# Ausgabe: "child" dann "parent"
+```
+###### ArbeitsverzeichnisIsolation
+```
+pwd                   # z.B. /home/tux
+(cd /tmp; pwd)        # zeigt /tmp
+pwd                   # zeigt wieder /home/tux
+```
+###### Typisches Problem mit Pipes
+```
+count=0
+echo -e "1\n2\n3" | while read line; do
+    ((count++))       # läuft in Subshell!
+done
+echo "Count: $count"  # zeigt 0, nicht 3!
+
+# Lösung:
+count=0
+while read line; do
+    ((count++))
+done < <(echo -e "1\n2\n3")
+echo "Count: $count"  # zeigt 3
+```
+## Textströme und Standardkanäle
+
+Es gibt drei Standardkanäle unter Linux:
+
+| Kanalbezeichnung | Filedescriptor | Nummer |
+| ---------------- | -------------- | ------ |
+| *Standareingabekanal*  | `stdin` | 0 |
+| *Standardausgabekanal*|  `stdout` | 1 |
+| *Standardfehlerkanal*  | `stderr` | 2 |
+
+Jeder Prozess der gestartet wird, wird mit diesen drei Standardkanälen verbunden. Über diese Kanäle erhält der Prozess Daten und gibt sie auch wieder aus. So können Ein- und Ausgaben unabhängig voneinander verarbeitet und auch umgeleitet werden.
+
+Die Kanäle jedes Prozesses, der in einer Shell gestartet wird, sind automatisch mit der Shell verbunden.
+
+Durch dieses Konzept können wir durch die Kombination simpler Kommandos komplexe Aufaben lösen (-> *Kommandopipelines*) 
+
+Wir können so z.B. auch Ausgaben von Kommandos in Dateien umleiten (-> *Redirects*).
+
+## UNIX Philosophie
+
+Die Unix-Philosophie ist ein Satz von Prinzipien für Software-Design, die ursprünglich in den 1970er Jahren mit dem Unix-Betriebssystem entwickelt wurden. Sie betont Einfachheit, Modularität und Wiederverwendbarkeit.
+
+Douglas McIlroy, der Erfinder der Unixpipes, fasste die Philosophie folgendermaßen zusammen:
+
+- Schreibe Computerprogramme so, dass sie nur eine Aufgabe erledigen und diese gut machen.
+- Schreibe Programme so, dass sie zusammenarbeiten.
+- Schreibe Programme so, dass sie Textströme verarbeiten, denn das ist eine universelle Schnittstelle.
+
+> "Write programs that do one thing and do it well."
+
+## KISS Prinzip
+
+- "Keep it stupid simple"
+- "Keep it super simple"
+- "Keep it simple, stupid!"
+
+## Redirects
+
+Mit Redirects kann die der Standardausgabekanal oder der Standardfehlerkanal in eine **Datei** umgeleitet werden. Es gibt zwei Arten von Redirects:
+
+- `>` - einfacher Redirect: Erstellt eine Datei falls nicht vorhanden, **leert** eine bereits vorhandene Datei
+- `>>` - doppelter Redirect: Erstellt eine Datei falls nicht vorhanden, **hängt Ausgabe an**
+
+#### Umleitung des Standareingabekanals
+```bash
+echo huhu 1> hallo.txt   # die 1 gibt hier die Kanalnummer an
+echo huhu 1>> hallo.txt  # die 1 gibt hier die Kanalnummer an
+echo huhu > hallo.txt    # kann bei stdout auch weggelassen werden
+```
+```bash
+ls -l /etc > ls-ausgabe.txt
+ls -l /etc >> ls-ausgabe.txt
+```
+#### Umleitung des Standardfehlerkanals
+```bash
+ls mich-gibts-nicht  2> ls-fehler.txt     # hier muss die 2 stehen, da wir stderr umleiten
+ls mich-gibts-nicht  2>> ls-fehler.txt    # hier muss die 2 stehen, da wir stderr umleiten
+```
+#### Umleitung beider Kanäle
+
+##### in separate Dateien
+```bash
+ls mich-gibts/ mich-gibts-nicht/ 1> ergebnis.txt 2>fehler.txt
+ls mich-gibts/ mich-gibts-nicht/ > ergebnis.txt 2>fehler.txt
+```
+##### in die gleiche Datei
+```bash
+ls mich-gibts/ mich-gibts-nicht/ > ergebnis-und-fehler.txt 2>&1
+```
+>[!NOTE]
+> Das `&` gibt hier an, dass wir einen *Kanal*/*Filedescriptor* meinen, ansonsten würden die Fehler in eine Datei mit dem Namen `1` umgeleitet werden.
+> Das `2>&1` muss in diesem Fall hinter dem `>` stehen, da die Redirects an sich von links nach rechts ausgewertet werden. `stdout` muss also bereits in die Datei umgeleitet sein, damit auch `stderr` dorthin schreibt. Ansonsten würde der Fehlerkanal mit dem *eigentlichen* Ziel, nämlich der Shell verknüpft werden.
+
+```bash
+ls mich-gibts/ mich-gibts-nicht/ &> ergebnis-und-fehler.txt
+```
+>[!NOTE]
+> Verkürzte Schreibweise
+
+
+TODO
+
+```bash
+ls mich-gibts/ mich-gibts-nicht/ > ergebnis-und-fehler.txt 2> ergebnis-und-fehler.txt
+```
+#### Umleitung einer Datei in ein Kommando
+Wir können auch den Inhalt einer Datei in `stdin` umleiten mit einem "umgedrehten" Redirect `<`. 
+
+Das ist z.B. beim Kommando `tr` nötig, da `tr` keinen Dateinamen als Argument entgegennimmt:
+```bash
+# Ersetzung von , durch ;
+tr "," ";" < file.csv
+```
+>[!NOTE]
+> Obige Syntax führt nicht zu einer Ersetzung innerhalb der Datei, sondern erzeugt nur eine Ausgabe auf `stdout` mit den ersetzten Zeichen.
+```bash
+# Ersetzung von , durch ;, Erstellen einer Datei mit dem Ergebnis
+tr "," ";" < file.csv > file-new.csv
+```
+>[!NOTE]
+> Eine Ersetzung in der gleichen Datei ist so mit `tr` nicht möglich. Dazu könnte man andere Kommandos wie z.B. `sed` verwenden.
+
+### /dev/null
+`/dev/null` ist soetwas wie das *Schwarze Loch* eines Linux Systems. Alles was wir dorthin leiten, verschwindet. Wir nutzen einen Redirect nach `/dev/null` ganz bewusst, um z.B. Fehlermeldungen eines Kommandos zu unterdrücken. Oder auch in Skripten, um den normalen Output eines Kommandos zu unterdrücken.
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
