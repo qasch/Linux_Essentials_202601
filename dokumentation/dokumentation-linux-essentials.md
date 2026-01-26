@@ -471,11 +471,39 @@ ls mich-gibts/ mich-gibts-nicht/ &> ergebnis-und-fehler.txt
 > Verkürzte Schreibweise
 
 
-TODO
-
+###### Eigenbaulösung
+Theoretisch könnte man sich obiges Verhalten auch selber bauen, z.B. so:
 ```bash
-ls mich-gibts/ mich-gibts-nicht/ > ergebnis-und-fehler.txt 2> ergebnis-und-fehler.txt
+ls mich-gibts/ mich-gibts-nicht/ > ergebnis-und-fehler.txt 2>> ergebnis-und-fehler.txt
 ```
+Das **kann** gut gehen, aber auch zu einem nicht gewollten Verhalten führen, da beide Filedescriptoren versuchen, **zur gleichen Zeit** in die gleiche Datei zu schreiben, was zu einer *Race Condition* führen kann:
+
+|Zeitpunkt | stdout schreibt | stderr schreibt | Dateiinhalt |
+| -------- | --------------- | --------------- | ----------- |
+|t0         | (Position 0)    | (Position 0)   | ""          |
+|t1         | "mich-gibts:\n"    | -               | "mich-gibts:\n" |
+|           |(Position → 12)  |     (Position 0)|        |
+|t2         |"test\n"         | -              | "mydir:\ntest\n"|
+|           |(Position → 17)  |     (Position 0)|  |
+|t3         | -               | "ls: cannot access..."|"ls: cannot a..."|
+|           |                 | (Position → 65) | |
+
+Das Problem: Beide Zeiger starten bei Position 0.
+
+Wenn `stderr` später schreibt, überschreibt es teilweise das, was `stdout` geschrieben hat. Die genaue Ausgabe hängt davon ab:
+
+- Wie schnell die Prozesse schreiben
+- Wann das Betriebssystem die Schreiboperationen ausführt
+- Puffergröße und Timing
+
+Daher erscheint entweder gar keine Fehlermeldung, oder sie ist abgeschnitten etc.
+
+##### Warum funktioniert `2>&1`?
+- `>`  öffnet Filedescriptor 1 für die Datei
+- `2>&1` macht Filedescriptor 2 zu einer Kopie von Filedescriptor 1
+- Beide teilen sich denselben Schreibzeiger
+- Die Shell koordiniert die Schreibvorgänge, so dass es zu keinen Überschreibungen kommt
+
 #### Umleitung einer Datei in ein Kommando
 Wir können auch den Inhalt einer Datei in `stdin` umleiten mit einem "umgedrehten" Redirect `<`. 
 
