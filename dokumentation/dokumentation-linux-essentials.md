@@ -588,13 +588,13 @@ Sie unterscheiden sich in Zielgruppe, Philosophie, Stabilität, Update-Zyklus, S
 - **Arch Linux** →  folgt dem KISS Prinzip, nach Insatllation absolut minimalistisch, Rolling Release, eher für erfahrenere User, Desktop
 - **openSUSE** →  Desktop und Server, YaST als Admin-Tool (grafisches Tool, mit dem sämtliche administrativen Aufgaben erfüllt werden können
 
-## Release-Modelle
+### Release-Modelle
 
 - **Fixed Release**:  Stabile Versionen in festen Intervallen. Nur mit einer neuen Version der Distribution kommt auch neue Version von Software. Weniger aktuell, dafür stabiler. (Debian, Ubuntu, RHEL, openSUSE Leap)
 - **Rolling Release**: Kontinuierliche Updates, keine festen Versionen, aktuelle Software kommt direkt in die Repos. Sehr aktuell (*Bleeding Edge*), dafür tendentiell weniger stabil. (Arch Linux, openSUSE Tumbleweed)
 - **Hybrid**:  Kombination aus stabilen Releases und optionalen Rolling-Komponenten. (Fedora (teils), Manjaro (basiert auf Arch Linux))
 
-## Supportzeitraum und LTS (Long Term Support)
+### Supportzeitraum und LTS (Long Term Support)
 
 Die einzelnen Versionen der Release basierten Distributionen werden über einen bestimmten Zeitraum hinweg mit Updates versorgt, bis sie ihren EOL (End of Life) erreichen und keine Updates mehr bekommen.
 
@@ -602,13 +602,167 @@ Die einzelnen Versionen der Release basierten Distributionen werden über einen 
 
 Es gibt sogar Versionen von Ubuntu und RHEL, die über mehr als 10 Jahre lang (Sicherheits-)Updates erhalten (*ELS - Extended Lifecycle Support* bzw. *ESM - Extended Security Maintenance*), dann aber auch (teilweise) kostenpflichtig sind.
 
+## Softwareverwaltung / Paketmanager
 
+*APT (Advanced Package Tool)* ist der Standard-Paketmanager für Debian-basierte Linux-Distributionen wie Debian, Ubuntu, Linux Mint etc. APT verwaltet (Installation, Deinstallation etc. ) Softwarepakete, löst Abhängigkeiten (weitere Software die für den Betrieb der zu installierenden Software nötig ist) automatisch auf und hält das System aktuell.
 
+### Akutalisierung des gesamten Systems
 
+#### apt update
 
+Aktualisiert die lokale Paketdatenbank mit den neuesten Informationen aus den konfigurierten Paketquellen. Von allen konfigurierten Repositories werden die aktuellen Paketlisten heruntergeladen und mit den lokal vorhandenen abgeglichen. So können Pakete identifiziert werden, die aktualisiert werden können/sollten.
 
+#### apt upgrade
 
+Aktualisiert **sämtliche** über die Paketverwaltung installierten Pakete auf dem System. Dabei werden jedoch keine neuen Pakete installiert oder vorhandene (Abhängigkeiten) entfernt
 
+#### apt full-upgrade
 
+Wie `apt upgrade`, allerdings werden bei Bedarf Abhängigkeiten zusätlich installiert oder entfernt. Ersetzt `apt dist-upgrade` (wird aber auch noch unterstützt).
 
+### Installation 
 
+#### apt install
+
+```bash
+apt install <paket>
+apt install <paket1> <paket2> <paket3>
+```
+Installiert Pakete bzw. aktualisiert gezielt einzelne Pakete.
+
+### Deinstallation
+#### apt remove 
+```bash
+apt remove <paket>
+apt remove <paket1> <paket2> <paket3>
+```
+Entfernt Pakete, behält aber deren Konfigdateien auf dem System. Eventuell während der Insatllation des Pakets automatisch mitinstallierten Abhängigkeiten/Dependencies werden ebenfalls **nicht** mit entfernt.
+
+#### apt purge
+#### apt remove --purge
+```bash
+apt purge <paket>
+apt remove --purge <paket>
+```
+Entfernt Pakete und zusätzlich deren Konfiguratoinsdateien. 
+
+Dass die Konfiguratoinsdateien standardmässig auf dem System verbleiben ist gewollt. So ist es möglich, ein Paket zu entfernen und zu einem späteren Zeitpunkt neu zu installieren ohne seine Konfiguration zu verlieren. 
+
+Möchte man aber mit einem Paket "sauber und neu" anfangen, könnte man es inklusive seiner Konfiguratoinsdateien löschen und so mit einer frischen Installation starten.
+
+#### apt autoremove 
+
+Entfernt automatisch installierte Abhängigkeiten, die nicht mehr benötigt werden.
+
+Eventuell vorhanden Konfiguratoinsdateien bleiben erhalten.
+
+#### apt autopurge
+#### apt autoremove --purge
+
+Entfernt automatisch installierte Abhängigkeiten, die nicht mehr benötigt werden.
+
+Eventuell vorhanden Konfiguratoinsdateien werden mit entfernt.
+
+Ist in der Regel sicher in der Ausführung, trotzdem sollten wir uns (generell) immer die Liste der zu installierenden bzw. vor allem auch zu entfernenden Pakete gut anschauen.
+
+### Suche nach Paketen
+
+#### apt search
+```bash
+apt search <suchbegriff>
+```
+Durchsucht die Namen und Beschreibungen der Pakete nach `<suchbegriff>`. 
+
+Wir brauchen in der Regel jedoch Kenntnis über den Namen des Pakets für ein bestimmtes Kommando/Dienst etc. Die Suche ist zugegebenermassen nicht besonders komfortabel. Es gibt Hilfsmittel wie z.B. `apt-file`, mit welchem wir den Namen des Pakets finden können, in dem sich ein bestimmtes Kommando befindet. Ansonsten ist hier eine kurze Recherche nach dem Paketnamen durchaus sinnvoll.
+
+### Informationen über Pakete
+```bash
+apt show <paketname>
+```
+
+Zeigt ausführliche Informationen zu einem Paket an, wie:
+
+- Paketname und Version
+- Beschreibung
+- Abhängigkeiten
+- Größe
+- Maintainer
+- Homepage
+- etc.
+
+#### Alternativen
+
+- aptitude -> interaktiv, Pakete sind in Gruppen sortiert, ist ein Frontend für `apt`
+- muss manuell nachinstalliert werden
+
+### sources.list
+
+- enthält Links zu den verwendetet Repositories, bzw. Links zu den Servern von denen wir Pakete herunterladen
+- Versionsname -> Upgrade
+
+## Note: stable, testing, sid
+
+## Prozesse
+
+Ein Prozess ist ein sich in der Auführung befindliches Programm. Ein Programm resultiert immer in mindestens einem Prozess. Prozesse laufen jeweils in einem von anderen unabhängigen "Resourcenraum", haben eine eigene PID, kennen zusätzlich die  PPID (Parent Process ID), also die ID des Prozesses, von dem sie gestartet wurden (Elternprozess). Prozesse sind also hierarchisch organisiert. Prozesse können mit dem Kommando `kill` über Signale beeinflusst werden.
+
+### Vorder- und Hintergrundprozesse
+
+Auf der Shell kann immer nur ein einzelner Prozess im Vordergrund ausgeführt werden, die Shell wird für den Zeitraum der Ausführung *blockiert*, kann also keine anderen Kommandos verarbeiten. Prozesse können mit der Tastenkombination `STRG+Z` angehalten und in den Hintergrund geschickt werden. Mit dem Kommando `bg` kann dieser Prozess dann im Hintergrund fortgesetzt werden, `fg` holt den Prozess in den Vordergrund zurück.
+
+Wir können einen Prozess beim Start aber auch direkt in den Hintergrund schicken und starten (durch Anhängen eines `&`):
+```bash
+ kommando &
+ sleep 200 &
+```
+
+### Die Kommandos `ps`, `jobs`, `fg` und `bg`
+
+Wir können uns mit `ps` generell Prozesse anzeigen lassen, egal ob sie sich im Vorder- oder Hintergrund befinden, angehalten sind oder laufen, mit den passenden Optionen auch sämtliche laufenden Prozesse des Systems. 
+
+Mit `jobs` hingegen lassen sich nur die **Hintergrundprozesse** der aktuellen Shell anzeigen.
+
+Ein z.B. mit der Tastenkombination angehaltener und in den Hintergrund verschobener Prozess kann mit `bg` im Hintergrund fortgesetzt werden.
+
+Mit `fg` lässt sich ein Hintergrundprozess (Job) wieder in den Vordergrund holen (und starten falls angehalten).
+
+- `ps` : Anzeige aller in der aktuellen Shell laufenden Prozesse
+  - `ps -aux`: Anzeige aller laufende Prozessez auf dem System
+  - `ps aux`: Anzeige aller laufende Prozessez auf dem System
+  - `ps -ef`: auch Anzeige aller laufenden Prozesse auf dem System
+  - `ps --forest`: Prozesshirarchie (Baumstruktur) anzeigen
+- `jobs`: Anzeigen der Hintergrundprozesse
+- `fg`: letzten/aktuellen/default Job in den Vordergrund holen
+  - `fg %<jobnummer>`: Job mit Jobnummer `<jobnummer>` in den Vordergrund holen
+- `bg`: Hintergrundprozess fortsetzen
+  - `bg %<jobnummer>`: Hintergrundprozess mit Jobnummer `<jobnummer>` in fortsetzen
+
+### kill
+
+ `kill` sendet, anders als der Name vermuten lässt, generell Signale an Prozesse. Es muss die PID des Prozesses angegeben werden, die Angabe des Prozessnamens funktioniert nicht.
+
+ - `kill -s <signal> <PID>`: sendet <signal> an den Prozess mit der PID <PID>
+ - `kill -<signal> <PID>`: sendet <signal> an Prozess mit der PID <PID>
+
+`<signal>` kann sowohl die Signalnummer, als auch der Signalname, sowohl in der Form mit vorangestellten `SIG` als auch ohne sein. Es gibt also sechs Varianten zur Angabe.
+
+ Die PID eines Prozesses kann auf mehrere Arten ermittelt werden:
+```bash
+ps -ef | grep <prozessname>
+pgrep <prozessname>
+```
+### einige wichtige Signale
+
+- `SIGTERM` (15): Standard, falls kein bestimmtes Signal angegeben wird. Sendet eine "freundliche" Aufforderung an den Prozess, sich doch bitte zu beenden. Im Prozess selbst ist festgelegt, wie er auf das Signal reagiert, z.B. werden noch gewisse Aufräumarbeiten durchgeführt etc.
+- `SIGINT` (2): sendet eine deutlichere Aufforderung an den Prozess, sich zu beenden, wird bei der Tastenkomnination `STRG+C` (_Cancel_) gesendet
+- `SIGKILL` (9): rabiateste Methode, Signal wird nicht an den Prozess, sondern direkt an den Scheduler gesendet, der daraufhin den entsprechenden Prozess aus seiner Liste löscht, der Prozess somit keine CPU Zeit mehr zur Verfügung gestellt bekommt und zwangsläufig beendet wird.
+- `SIGTSTP` (20): hält Prozess an und schickt ihn in den Hintergrund (`STRG+Z`), kann vom Prozess nicht abgefangen werden
+- `SIGCONT` (18): führt angehaltene Prozesse fort
+
+### pgrep
+
+Gibt anhand des übergebenen Patterns die dazu passenden PIDs aus.
+
+### pkill
+
+Nimmt im Gegensatz zu `kill` ein Pattern und keine PID entgegen, sendet Signale an **alle** Prozesse, auf die das Patterns passt. `pkill` kann praktisch sein, ist aber auch mit Vorsicht anzuwenden.
