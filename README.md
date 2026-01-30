@@ -22,9 +22,9 @@
   - [ ] 6.4.1	4.1 Choosing an Operating System (weight: 1)
   - [ ] 6.4.2	4.2 Understanding Computer Hardware (weight: 2)
   - [ ] 6.4.3	4.3 Where Data is Stored (weight: 3)
-    - [ ] ps, top, free
+    - [x] ps, top, free
     - [ ] syslog, dmesg
-    - [ ] FHS
+    - [x] FHS
   - [ ] 6.4.4	4.4 Your Computer on the Network (weight: 2)
 - [ ] 6.5	Topic 5: Security and File Permissions
   - [ ] 6.5.1	5.1 Basic Security and Identifying User Types (weight: 2)
