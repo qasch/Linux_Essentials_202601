@@ -328,7 +328,21 @@ echo ${foo}     # gibt den Wert der Variablen foo aus
 ```
 ### Kommandosubstitution
 
-TODO
+Durch die *Kommandosubstitution* können wir Variablen die Ausgabe eines Kommandos zuweisen. Genauer gesagt wird eine *Subshell* gestartet, in welcher das Kommando ausgeführt wird.
+```bash
+aktuelles_datum=$(date)
+aktuelles_datum=`date`     # veraltete Syntax
+```
+### Rechnen mir Variablen / Arithmetic Operations
+
+Wir können auch einfache Rechenoperationen in der BASH durchführen:
+```bash
+zahl1=3
+zahl2=4
+summe=$(( zahl1 + zahl2 ))
+summe=$((zahl1+zahl2))
+let summe = $zahl1 + $zahl2 
+```
 
 #### Subshells
 
