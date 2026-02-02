@@ -766,3 +766,208 @@ Gibt anhand des übergebenen Patterns die dazu passenden PIDs aus.
 ### pkill
 
 Nimmt im Gegensatz zu `kill` ein Pattern und keine PID entgegen, sendet Signale an **alle** Prozesse, auf die das Patterns passt. `pkill` kann praktisch sein, ist aber auch mit Vorsicht anzuwenden.
+
+### Prozessabhängigkeiten bzw. Terminal-unabhängige Ausführung
+
+Jeder Prozess existiert in einer hierarchischen Struktur. Jeder Prozess (außer dem Init-Prozess mit PID 1) hat einen Elternprozess, der ihn erzeugt hat.
+
+Führen wir einen Prozess in einem Terminal aus, wird die Shell zum Elternprozess des neuen Prozesses. Schliessen wir die Shell, senden das System ein `SIGHUP` an alle Prozesse, die mit dieser Shell verbunden sind, was diese (normlaerweise) beendet.
+
+Gerade wenn wir über SSH arbeiten und langwierige Prozesse wie z.B. ein Systemupgrade oder ähnliches durchführen, birgt das natürlich eine gewisse Gefahr.
+
+Es gibt jedoch mehrere Möglichkeiten, Prozesse von der weiterlaufen zu lassen, obwohl die Elternshell beendet wird.
+
+#### nohup
+
+- Ignoriert das SIGHUP-Signal
+- Leitet STDOUT und STDERR standardmäßig in die Datei `nohup.out` um
+- Der Prozess läuft weiter, auch wenn das Terminal geschlossen wird
+
+```bash
+# Einfache Ausführung
+nohup ./mein-script.sh &
+
+# Mit eigener Ausgabedatei
+nohup ./langläufiger-prozess.sh > prozess.log 2>&1 &
+```
+#### disown
+
+`disown` ist ein Shell-Builtin, das einen Job (Hintergrundprozess) aus der Job-Tabelle der Shell entfernt. So wird verhindert, dass ein `SIGHUP` beim Beenden der Shell an den Prozess gesendet wird.
+
+```bash
+# Prozess im Hintergrund starten
+./mein-script.sh &
+
+# Aktuellen Hintergrund-Job disownen
+disown
+
+# Spezifischen Job disownen
+disown %1
+
+# Alle Hintergrund-Jobs disownen
+disown -a
+
+# Mit laufendem Prozess: Prozess stoppen, dann disownen
+# Ctrl+Z (stoppt Prozess)
+bg          # Prozess im Hintergrund fortsetzen
+disown      # Prozess von Shell trennen
+```
+
+
+### Terminal-Multiplexer
+
+Terminal-Multiplexer sind Tools, die mehrere virtuelle Terminal-Sessions innerhalb eines einzigen physischen Terminals verwalten können.
+
+So können wir in einem Terminal z.B. mehrere "Fenster" mit unterschiedlichen Shells öffnen, diese in einem Layout organisieren (Split-Screen), Sessions speichern und wiederherstellen usw.
+
+Wir können uns von einer Session trennen (*detach*) und zu einem späteren Zeitpunkt wieder verbinden (*attach*). Auch so können Prozesse unabhängig von der Shell ausgeführt werden.
+
+Es ist auch möglich, eine Session zwischen mehreren Benutzern zu teilen, um so z.B. gemeinsam auf einem System oder sogar in einer Shell zu arbeiten.
+
+Es gibt mehrere Terminal-Multiplexer:
+
+- `screen` ist der älteste Vertreter, Konfiguration etwas unkomfortabel
+- `tmux` ist der modernere Nachfolger von `screen` mit verbesserter Architektur und Funktionsumfang und Konfigurationsmöglichkeiten
+- `zellij` ist ein der modernste Terminal-Multiplexer, in Rust geschrieben und auf Benutzerfreundlichkeit optimiert (besseres UI, Floating Panes etc.)
+
+## Reguläre Ausdrücke
+
+Reguläre Ausdrücke (engl. *Regular Expressions*, kurz *Regex* oder *RegEx*) sind Zeichenketten, die ein Suchmuster beschreiben. Sie werden verwendet, um Text zu durchsuchen, zu validieren oder zu ersetzen. Regex ist in vielen Programmiersprachen und Tools verfügbar.
+
+### 2. Grundlegende Syntax
+
+#### Literale Zeichen
+
+Die meisten Zeichen matchen sich selbst. Das Muster `cat` findet die Zeichenfolge `"cat"` im Text.
+
+#### Metazeichen
+
+Spezielle Zeichen mit besonderer Bedeutung:
+
+| Zeichen | Bedeutung |
+|---------|-----------|
+| `.` | Beliebiges einzelnes Zeichen (außer Zeilenumbruch) |
+| `^` | Anfang der Zeile |
+| `$` | Ende der Zeile |
+| `*` | 0 oder mehr Wiederholungen |
+| `+` | 1 oder mehr Wiederholungen |
+| `?` | 0 oder 1 Wiederholung (optional) |
+| `\|` | Oder (Alternative) |
+| `\` | Escape-Zeichen (für Metazeichen) |
+
+### 3. Zeichenklassen
+
+Zeichenklassen ermöglichen das Matchen von Zeichen aus einer bestimmten Menge.
+
+| Muster | Bedeutung |
+|--------|-----------|
+| `[abc]` | Eines der Zeichen a, b oder c |
+| `[^abc]` | Alles außer a, b oder c |
+| `[a-z]` | Alle Kleinbuchstaben von a bis z |
+| `[A-Z]` | Alle Großbuchstaben von A bis Z |
+| `[0-9]` | Alle Ziffern von 0 bis 9 |
+| `\d` | Ziffer (entspricht [0-9]) |
+| `\D` | Keine Ziffer (entspricht [^0-9]) |
+| `\w` | Wortzeichen (a-z, A-Z, 0-9, _) |
+| `\W` | Kein Wortzeichen |
+| `\s` | Whitespace (Leerzeichen, Tab, Zeilenumbruch) |
+| `\S` | Kein Whitespace |
+
+### 4. Quantifizierer
+
+Quantifizierer geben an, wie oft ein Zeichen oder eine Gruppe vorkommen soll.
+
+| Muster | Bedeutung |
+|--------|-----------|
+| `{n}` | Genau n Wiederholungen |
+| `{n,}` | Mindestens n Wiederholungen |
+| `{n,m}` | Zwischen n und m Wiederholungen |
+| `*?` | Nicht-gieriger Match (so wenig wie möglich) |
+| `+?` | Nicht-gieriger Match (so wenig wie möglich) |
+
+### 5. Gruppen und Rückverweise
+
+| Muster | Bedeutung |
+|--------|-----------|
+| `(abc)` | Erfassungsgruppe (speichert Match) |
+| `\1`, `\2` | Rückverweis auf Gruppe 1, 2 usw. |
+
+### 6. Anker und Grenzen
+
+| Muster | Bedeutung |
+|--------|-----------|
+| `\b` | Wortgrenze |
+| `\B` | Keine Wortgrenze |
+
+### 7. Praktische Beispiele
+
+| Aufgabe | Regex |
+|---------|-------|
+| E-Mail-Adresse | `^[\w.-]+@[\w.-]+\.\w{2,}$` |
+| Telefonnummer (DE) | `^\+?49\s?\d{3,4}\s?\d{6,8}$` |
+| URL | `https?://[\w.-]+\.[a-z]{2,}` |
+| Datum (DD.MM.YYYY) | `^(0[1-9]\|[12][0-9]\|3[01])\.(0[1-9]\|1[0-2])\.\d{4}$` |
+| Postleitzahl (DE) | `^\d{5}$` |
+| IP-Adresse (IPv4) | `^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$` |
+| Hexadezimalfarbe | `^#?([A-Fa-f0-9]{6}\|[A-Fa-f0-9]{3})$` |
+
+### 10. Nützliche Links dazu
+
+- **regex101.com** - Interaktiver Regex-Tester mit Erklärungen
+- **regexr.com** - Weiterer Regex-Tester mit Community-Mustern
+- **regexcrossword.com** - Spielerisch Regex lernen
+- **Regular-Expressions.info** - Umfassende Dokumentation
+
+## Dateien finden
+
+### locate
+
+Durchsucht das Dateisystem nach einem *Pattern* bzw. Suchbegriff.
+
+`locate` ist sehr schnell, denn es durchsucht eine Datenbank (also eine Art Index/Glossar), die Suche ist so deutlich schneller möglich, als wenn jede Datei einzeln angeschaut werden müsste.
+
+Die Datenbank wird vom System über einen sog. `cronjob`/*Systemd Timer* automatisch periodisch erneuert.
+
+Manuell können wir die Datenbank mit dem Kommando `updatedb` aktualisieren. Dafür sind `root` Rechte nötig.
+
+`locate` hat einige Optionen, die wichtigste davon ist vielleicht 
+
+- `-i` (*ignore-case*),
+- `-e` auch ohne die Aktualisierung der Datenbank werden nur existierende Dateien angezeigt. 
+- `-r` so können wir `locate` einen Regulären Ausdruck zur Suche übergeben. Hier ist die Optionn `-R` auch noch interessant, um den verwendeten RegEx Dialekt anzugeben
+
+Es kann sehr sinnvoll sein, die Ergebnisse von `locate` nachträglich mit Tools wie z.B. `grep` zu filtern
+
+### find
+
+--- TODO ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
