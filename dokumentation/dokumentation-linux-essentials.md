@@ -620,7 +620,14 @@ Es gibt sogar Versionen von Ubuntu und RHEL, die über mehr als 10 Jahre lang (S
 
 *APT (Advanced Package Tool)* ist der Standard-Paketmanager für Debian-basierte Linux-Distributionen wie Debian, Ubuntu, Linux Mint etc. APT verwaltet (Installation, Deinstallation etc. ) Softwarepakete, löst Abhängigkeiten (weitere Software die für den Betrieb der zu installierenden Software nötig ist) automatisch auf und hält das System aktuell.
 
-### Akutalisierung des gesamten Systems
+`apt` ist der Nachfolger von `apt-get`. die Subkommandos wie `install`, `update` und `upgrade` sind hier gleich. Unterschiede gibts es z.B. beim Suchen nach Paketen:
+```bash
+apt search
+apt-cache search
+```
+In Skripten wird aufgrund des stabileren CLIs weiterhin die Verwendung von `apt-get` empfohlen, für den täglichen Gebrauch `apt`. Im folgenden wird also nur auf die Syntax von `apt` eingegangen.
+
+### Aktualisierung des gesamten Systems
 
 #### apt update
 
@@ -715,6 +722,146 @@ Zeigt ausführliche Informationen zu einem Paket an, wie:
 - Versionsname -> Upgrade
 
 ## Note: stable, testing, sid
+
+#### Syntax
+
+```
+deb [optionen] url distribution komponenten
+deb-src [optionen] url distribution komponenten
+```
+
+**Beispiel:**
+```
+deb http://deb.debian.org/debian/ bookworm main contrib non-free non-free-firmware
+deb-src http://deb.debian.org/debian/ bookworm main contrib non-free non-free-firmware
+```
+
+**Erklärung:**
+
+- `deb`: Binärpakete (kompilierte Software)
+- `deb-src`: Quellcode-Pakete
+- `url`: Mirror-Server
+- `distribution`: Debian-Version (z.B. bookworm, bullseye)
+- `komponenten`: Paketgruppen (main, contrib, non-free)
+
+#### Komponenten
+
+- **main:** Freie Software, die den Debian-Richtlinien entspricht
+- **contrib:** Freie Software mit Abhängigkeiten zu nicht-freier Software
+- **non-free:** Proprietäre Software
+- **non-free-firmware:** Proprietäre Firmware (ab Debian 12)
+
+#### Repository hinzufügen
+
+```bash
+# Manuell zur sources.list hinzufügen
+echo "deb http://example.com/debian stable main" | sudo tee -a /etc/apt/sources.list
+
+# Oder in separater Datei
+echo "deb http://example.com/debian stable main" | sudo tee /etc/apt/sources.list.d/example.list
+
+# PPA hinzufügen (Ubuntu)
+sudo add-apt-repository ppa:user/repository
+```
+
+Nach dem Bearbeiten der `sources.list` muss immer ein `apt update` durchgeführt werden, um die neuen Paketlisten zu laden.
+
+### Debian-Zweige: Stable, Testing, Sid
+
+Debian bietet verschiedene Entwicklungszweige mit unterschiedlichen Stabilitäts- und Aktualitätsgraden.
+
+#### Stable (aktuell: Bookworm)
+```
+deb http://deb.debian.org/debian/ bookworm main contrib non-free non-free-firmware
+```
+**Eigenschaften:**
+
+- **Stabilität:** Sehr hoch
+- **Sicherheitsupdates:** Regelmäßig und zuverlässig
+- **Neue Features:** Selten
+- **Release-Zyklus:** Alle 2-3 Jahre
+- **Empfohlen für:** Produktionsserver, kritische Systeme
+
+**Vorteile:**
+
+- Zuverlässig und gut getestet
+- Vorhersehbares Verhalten
+- Lange Support-Zeiträume
+
+**Nachteile:**
+
+- Ältere Software-Versionen
+- Neue Features kommen spät
+
+#### Testing (aktuell: Trixie)
+```
+deb http://deb.debian.org/debian/ testing main contrib non-free non-free-firmware
+```
+**Eigenschaften:**
+
+- **Stabilität:** Mittel bis hoch
+- **Sicherheitsupdates:** Mit Verzögerung
+- **Neue Features:** Regelmäßig
+- **Rolling Release:** Kontinuierliche Updates
+- **Empfohlen für:** Desktop-Systeme, Entwickler
+
+**Vorteile:**
+
+- Aktuellere Software als Stable
+- Meist stabil genug für den täglichen Gebrauch
+- Wird zum nächsten Stable
+
+**Nachteile:**
+
+- Gelegentliche Instabilitäten
+- Sicherheitsupdates nicht so schnell wie bei Stable
+- Kann während des Freezes veralten
+
+### Sid (Unstable)
+```
+deb http://deb.debian.org/debian/ sid main contrib non-free non-free-firmware
+```
+**Eigenschaften:**
+
+- **Stabilität:** Niedrig bis mittel
+- **Sicherheitsupdates:** Keine garantiert
+- **Neue Features:** Sofort
+- **Rolling Release:** Permanente Updates
+- **Empfohlen für:** Entwickler, Tester, Erfahrene Nutzer
+
+**Vorteile:**
+
+- Neueste Software-Versionen
+- Bleeding-edge Features
+- Hilft Debian-Entwicklung
+
+**Nachteile:**
+
+- Kann jederzeit kaputt gehen
+- Keine Sicherheits-Garantien
+- Erfordert aktive Wartung
+- Nicht für Produktivumgebungen
+
+### Zweige wechseln / Upgrade
+
+Um ein Upgrade von einer Debian Version auf eine andere durchzuführen sind prinzipiell folgenden Schritte nötig:
+
+```bash
+# Backup erstellen
+sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
+
+# sources.list bearbeiten und Zweig ändern
+sudo nano /etc/apt/sources.list
+# Hier den bisherigen Versionnamen (z.B. bookworm) durch den neuen (z.B. trixie) ersetzen
+
+# System aktualisieren
+sudo apt update
+sudo apt full-upgrade
+
+# Eventuell verwaiste Pakete entfernen
+sudo apt autoremove
+```
+**Achtung:** Dies ist eine vereinfachte Darstellung des Prozesses, der so zwar funktionert aber gewisse Besonderheiten/Vorsichtsmassnahmen ausser acht lässt.
 
 ## Prozesse
 
@@ -973,10 +1120,571 @@ Es kann sehr sinnvoll sein, die Ergebnisse von `locate` nachträglich mit Tools 
 
 ### find
 
---- TODO ---
+#### Grundlegende Syntax
+```bash
+find [Pfad] [Optionen] [Aktionen]
+```
+Das `find`-Kommando durchsucht Verzeichnisbäume nach Dateien und Verzeichnissen, die bestimmte Kriterien erfüllen.
+
+Das Kommando `find` ohne Argumente liefert eine (rekursive) Liste aller Dateien und Verzeichnisse im aktuellen Verzeichnis.
+
+Das erste Argument was wir `find` übergeben (müssen) ist das Startverzeichnis für die Suche.
+
+```bash
+# Alle Dateien im aktuellen Verzeichnis und Unterverzeichnissen
+find
+find .
+
+# Alle Dateien in /home
+find /home
+```
+Die Suche lässt sich nach vielen Kriterien verfeinern. In der Manpage von `find` wird von *Tests* gesprochen (-> Suche nach `TESTS`). Wir testen also alle Dateien, ob sie bestimmten Kriterien genügen.
+
+Der Test `-name` (**ein** Minuszeichen, nicht zwei) sucht z.B. nach Dateinamen. Wildcards werden akzeptiert, wir müssen nur darauf achten, dass die Shell das `*` nicht als Globbing Character interpretiert und es dementsprechend maskieren, so dass es an `find` durchgereicht wird.
+
+#### Suche nach Dateien mit der Endung `.txt`
+```bash
+find . -name "*.txt"
+
+# Case-insensitive Suche
+find . -iname "*.TXT"
+```
+
+#### Suche nach Dateiyyp
+
+| Option | Bedeutung |
+|--------|-----------|
+| `-type f` | Nur Dateien |
+| `-type d` | Nur Verzeichnisse |
+| `-type l` | Nur symbolische Links |
+
+**Beispiele:**
+
+```bash
+# Nur Dateien nach regulären Dateien suchen
+find /var/log -type f
+
+# Nur nach Verzeichnisse suchen
+find . -type d
+
+# Nur nach Symbolischen Links suchen
+find /usr -type l
+```
+
+#### Suche nach Namen
+
+| Option | Bedeutung |
+|--------|-----------|
+| `-name "muster"` | Exakte Übereinstimmung (case-sensitive) |
+| `-iname "muster"` | Case-insensitive |
+| `-path "muster"` | Suche im gesamten Pfad |
+
+**Beispiele:**
+
+```bash
+# Alle .log-Dateien
+find /var/log -name "*.log"
+
+# Case-insensitive
+find . -iname "readme.txt"
+
+# Pfad-Muster
+find . -path "*/config/*.conf"
+```
+
+#### Suche nach Dateigröße
+
+| Option | Bedeutung |
+|--------|-----------|
+| `-size n` | Genau n Blöcke (512 Bytes) |
+| `-size +n` | Größer als n |
+| `-size -n` | Kleiner als n |
+
+**Einheiten:**
+- `c` - Bytes
+- `k` - Kilobytes
+- `M` - Megabytes
+- `G` - Gigabytes
+
+**Beispiele:**
+
+```bash
+# Dateien größer als 100 MB
+find . -size +100M
+
+# Dateien kleiner als 1 KB
+find . -size -1k
+
+# Dateien mit genau 512 Bytes
+find . -size 512c
+
+# Leere Dateien
+find . -size 0
+```
+
+#### Suche nach Zeit
+
+| Option | Bedeutung |
+|--------|-----------|
+| `-mtime n` | Geändert (m -> modified) vor n Tagen |
+| `-mtime +n` | Geändert vor mehr als n Tagen |
+| `-mtime -n` | Geändert in den letzten n Tagen |
+| `-atime n` | Zugegriffen (a -> accessed) vor n Tagen |
+| `-ctime n` | Status geändert (c -> changed) vor n Tagen |
+
+**Minuten statt Tage:**
+- `-mmin` - Änderungszeit in Minuten
+- `-amin` - Zugriffszeit in Minuten
+- `-cmin` - Statusänderung in Minuten
+
+**Beispiele:**
+
+```bash
+# Dateien, die in den letzten 7 Tagen geändert wurden
+find . -mtime -7
+
+# Dateien, die vor mehr als 30 Tagen geändert wurden
+find . -mtime +30
+
+# Dateien, die in den letzten 60 Minuten geändert wurden
+find . -mmin -60
+```
+#### Suche nach Berechtigungen
+
+```bash
+# Dateien mit genau 644
+find . -perm 644
+
+# Dateien mit mindestens 644
+find . -perm -644
+
+# Ausführbare Dateien
+find . -perm /111
+
+# Dateien mit SUID-Bit
+find / -perm -4000
+```
+
+#### Suche nach Eigentümer
+
+```bash
+# Dateien von Benutzer "john"
+find /home -user john
+
+# Dateien von Gruppe "developers"
+find /var -group developers
+```
+
+#### Logische Operatoren
+
+| Operator | Bedeutung |
+|----------|-----------|
+| `-and` oder `-a` | UND (Standard) |
+| `-or` oder `-o` | ODER |
+| `-not` oder `!` | NICHT |
+| `( ... )` | Gruppierung |
+
+**Beispiele:**
+
+```bash
+# .txt ODER .pdf Dateien
+find . -name "*.txt" -o -name "*.pdf"
+
+# .log Dateien UND größer als 10MB
+find . -name "*.log" -and -size +10M
+
+# Keine .tmp Dateien
+find . -not -name "*.tmp"
+
+# Komplexe Bedingung mit Gruppierung
+find . \( -name "*.txt" -o -name "*.pdf" \) -and -size +1M
+```
+
+#### Aktionen
+
+Mit *Tests* können wir die Suche eingrenzen, bzw. jede vorhandenen Datei auf bestimmmte Kriterien testen. Auf die so gefundennen Dateien können wir sog. *Aktionan* anwenden:
+
+| Option | Bedeutung |
+|--------|-----------|
+| `-print` | Ausgabe (Standard) |
+| `-ls` | Detaillierte Ausgabe wie ls -l |
+| `-delete` | Dateien löschen (Vorsicht!) |
+| `-exec cmd {} \;` | Kommando für jede Datei ausführen |
+| `-exec cmd {} +` | Kommando mit mehreren Dateien |
+| `-ok cmd {} \;` | Wie -exec, aber mit Bestätigung |
+
+**Beispiele:**
+
+```bash
+# Alle .tmp Dateien löschen
+find . -name "*.tmp" -delete
+
+# Berechtigungen ändern
+find . -type f -exec chmod 644 {} \;
+
+# Dateien verschieben
+find . -name "*.log" -exec mv {} /backup/ \;
+
+# Mit Bestätigung
+find . -name "*.bak" -ok rm {} \;
+
+# Mehrere Dateien gleichzeitig (effizienter)
+find . -name "*.txt" -exec grep "error" {} +
+```
+
+#### einige Beispiele
+
+```bash
+# Alle .jpg Bilder größer als 5MB im Verzeichnis Pictures
+find ~/Pictures -name "*.jpg" -size +5M
+
+# Alte Log-Dateien löschen (älter als 30 Tage)
+find /var/log -name "*.log" -mtime +30 -delete
+
+# Alle Python-Dateien durchsuchen
+find . -name "*.py" -exec grep -H "import os" {} \;
+
+# Dateien mit bestimmten Berechtigungen finden
+find /var/www -type f ! -perm 644
+
+# Dateien grösser als 100MB finden (Top 10)
+find / -type f -size +100M -exec ls -lh {} \; | sort -k5 -h | tail -10
+
+# Doppelte Dateinamen finden
+find . -type f -printf "%f\n" | sort | uniq -d
+
+# Backup aller .conf Dateien
+find /etc -name "*.conf" -exec cp {} /backup/ \;
+
+# Alle ausführbaren Dateien finden
+find /usr/bin -type f -executable
+```
+## Benutzerkonten
+
+### Root Acount
+
+Der Benutzer `root` ist der *SuperUser* eines Linux Systems. Er ist der einzige Benutzer, welcher volle Rechte auf das System hat, also alles darf. Er muss auf jedem System existieren, damit dieses lauffähig ist, beispielsweise um während des Bootvorgangs einzelne Dienste zu starten usw.
+
+### Reguläre Benutzer
+
+Alle *regulären* Benutzer haben **eingeschränkte** Rechte. Sie dürfen z.B. nicht alle Kommandos ausführen oder generell irgendwelche Änderungen am System vornehmen. 
+
+Im Hintergrund wird das mehr oder weniger alles über die Berechtigungen an Dateien geregelt.
+
+Reguläre Benutzer können sich am System anmelden und interaktiv Kommandos ausführen. Dazu haben sie in der `/etc/passwd` eine *Login Shell* zugewiesen.
+
+### Systembenutzer / Servicenutzer / Pseudobenutzer
+
+Es gibt eine weitere Bentuzergruppe mit eingeschränkten Rechten. Das fällt uns auf, wenn wir die Datei `/etc/passwd` inspizieren. Die Mehrzahl der Benutzer haben wir gar nicht selbst angelegt, sie wurden automatisch vom System erzeugt, als bestimmte Dienste/Services installiert wurden.
+
+Genau das ist der Sinn dieser Benutzer: So können bestimmte Dienste bzw. Prozesse mit deren Berechtigungen ausgeführt werden um die Sicherheit des Systems zu erhöhen. Ein kompromittierter Dienst erhält so also nicht direkt Zugriff auf das gesamte System.
+
+Beispiel: `www-data` für Webserver wie *Apache oder Nginx* - selbst wenn ein Angreifer den Webserver übernimmt, kann er nicht auf andere Systemdateien zugreifen.
+
+Pseudobenutzer haben keine Login-Shell, ihnen wird `/usr/sbin/nologin` zugewiesen. Sie können sich also nicht am System anmelden und Kommandos ausführen.
+
+## Benutzer und Gruppen
+
+### Benutzer anlegen mit `useradd`
+
+Mit `useradd` (auf allen Linux Systemen verfügbar) können wir Benutzer anlegen.
+
+Obwohl ein Eintrag für ein Home-Verzeichnis in der `/etc/passwd` erzeugt wird, wird dies **nicht** angelegt
+```bash
+useradd <user>
+```
+Die Option `-m` bewirkt, dass unterhalb von `/home` ein Verzeichnis mit dem Namen des Benutzers erzeugt und alle Dateien aus `/etc/skel` dorthin kopiert werden.
+```bash
+useradd -m <user>
+useradd --create-home <user>
+```
+Benutzer eine Login-Shell zuweisen
+```bash
+useradd -s /bin/bash <user>
+useradd --shell /bin/bash <user>
+```
+Kommentarfeld für den vollen Namen des Benutzers und weitere Informationen
+```bash
+useradd -c "Voller Name des Benutzers" <user>
+useradd --comment "Voller Name des Benutzers" <user>
+```
+Neuen User eine bestimmte Primäre Gruppe zuordnen:
+```bash
+useradd -g <primary-group> <user>
+```
+Neuen User einer Liste von zusätzlichen Gruppen zuordnen:
+```bash
+useradd -G <supplementary-group-1>,<supplementary-group-2> <user>
+```
+Standarbeispiel zum Anlegen eines Benutzers:
+```bash
+useradd -m -c "Tux Tuxedo" -s /bin/bash tux
+```
+### Benutzerkonfiguration ändern
+
+Mit dem Kommando `usermod` können wir die Benutzerkonfiguration nachträglich wieder ändern. Die Optionen sind denen von `useradd` sehr ähnlich. 
+
+Ändern der Login Shell von `korni` zur `ksh`:
+
+```bash
+usermod -s /usr/bin/ksh korni
+```
+### Passwörter
+Passwörter werden nicht in der `/etc/passwd` gespeichert, sondern in der Datei `/etc/shadow`. Dafür gibt es mindestens zwei Gründe:
+
+1. Die Datei `/etc/passwd` muss von allen Usern auf dem System lesbar sein, wir wollen aber vermeiden, dass die Passwort-Hashes auslesbar sind
+2. In der Datei `/etc/passwd` werden Informationen über die User gespeichert, in der `/etc/shadow` Informationen über Passwörter (*Separation of Concern*)
+
+Passwörter liegen sind immer gehasht und zusätzlich gesaltet, d.h. dass vor dem Hashen des Passworts eine bestimmte zufällig generierte Zeichenkette vor das Passwort geschrieben und dann der kommplette String (Salt + Passwort) gehasht wird.
+
+So wird zum einen vermieden, dass zwei gleiche Klartextpasswörter den gleichen Hash erhalten, zum anderen werden Attacken über *Rainbow Tables* (riesige Tabellen mit Hash-Werten und den dazugehörigen Klartextpasswörtern) vermieden.
+
+Das Kommando `useradd` kann selbst keine Passwörter generieren! Wir rufen dazu nach dem Erstellen eines neuen Users das Kommando `passwd` auf.
+
+>[!NOTE] 
+> Wir können dem Benutzer auch bereits beim Erzeugen ein Passwort mitgeben. 
+
+**Wichtig:** Hier muss ein für das System passender *gesaltener* HASH angegeben werden. Der Eintrag wird exakt so in die `/etc/shadow` eingetragen.
+```bash
+useradd -p "PASSWORDHASH" <user>
+useradd --password "PASSWORDHASH" <user>
+```
+Schwer ist das nicht wirklich - wir können dazu das Kommando `openssl` verweden:
+```bash
+openssl passwd -6 PASSWORT
+```
+Die Option `-6` weist `openssl` an, den für Linux empfohlenen sicheren *SHA-512* Algorithmus zu verwenden.
+
+In einem Rutsch sähe das folgendermassen aus:
+```bash
+useradd -m -c "User mit Passwort" -p $(openssl passwd -6 'My!Secret#Password') -s /bin/bash userwithpass
+```
+### passwd
+Das Kommando ermöglicht die Änderung von Passwörtern. Mit Root-Rechten können so die Passwörter aller Benutzer geändert werden:
+```bash
+passwd <user>
+```
+Als regulärer Benutzer kann man damit sein eigenes Paswsort ändern:
+```bash
+passwd
+```
+### chsh
+Mit `chsh` kann ein Benutzer seine Login Shell ändern bzw. kann `root` die Login Shells jedes Users ändern.
+```bash
+chsh -s /bin/bash
+```
+### adduser
+
+`adduser` ist ein Perl-Skript, welches u.a. die Kommandos  `useradd` und `passwd` ausführt. Es ist *interaktiv*, wir brauchen keine Optionen zu übergeben, bestimmte Einstellungen werden abgefragt, vor allem fragt `adduser` direkt nach einem Passwort für den neuen Benutzer. Es sind andere Default-Werte gesetzt als bei `useradd`, z.B. die `bash` als Login-Shell.
+
+Dieses Kommando ist aber standardmässig nur auf Debian-basierten Distributionen vorinstalliert.
+
+#### Relevante Dateien
+Beim Anlegen von Benutzern passiert übrigens nur folgendes:
+
+- Ein Eintrag in der `/etc/passwd` mit den Benutzerinformationen wird erzeugt
+- Das Passwort wird in die `/etc/shadow` eingetragen
+- Die primäre Gruppe wird zur `/etc/group` hinzugefügt (und eventuell andere Gruppenzugehörigkeiten angepasst)
+- In der `/etc/gshadow` wird ein Eintrag ohne Passwort erzeugt (diese Datei bzw. Gruppenpasswörter werden eh nicht genutzt)
+
+Das war's. Nichts weiter. Keine Magie, nichts im Hintergrund. Nur Veränderung von Textdateien. Das ist ein gutes Beispiel dafür, wie die Konfiguration eines Linux System generell funktioniert. 
+
+### Gruppen
+
+Mit Gruppen können mehrere Benutzer zusammengefasst und ihnen gemeinsame Berechtigungen auf Dateien und Verzeichnisse gegeben werden.
+
+Im Unterschied zu Windows können Gruppen nur einzelne Benutzer enthalten, keine weiteren Gruppen.
+
+Für die Anzeige der Gruppenzugehörigkeiten kann man die Kommandos `groups` oder `id` benutzen.
+
+#### Primäre Gruppe
+Jeder Benutzer hat genau eine primäre Gruppe. Diese ist in `/etc/passwd` eingetragen. In der Regel hat sie den gleichen Namen wie der Benutzer. Sie ist nötig, da z.B. beim Erstellen von Dateien diese einem Benutzer und einer Gruppe zugewiesen werden.
+
+#### Sekundäre Gruppen
+Ein Benutzer kann aber auch mehreren zusätzlichen Gruppen angehören. Die Zugehörigkeiten sind in der `/etc/group` eingetragen.
+
+### Gruppe erstellen:
+Auf allen Linux Systemen existiert das Kommando `groupadd`
+```bash
+groupadd <gruppe>
+```
+### Benutzer einer Gruppe hinzufügen:
+Auch die Gruppenzugehörigkeiten passen wir mit dem Kommando `usermod` an:
+```bash
+usermod -g <primary-group> <user>
+usermod -G <absolute-list-of-supplementary-groups> <user>
+usermod -aG <group1>,<group2>,<group3> <user>
+```
+Vorsicht mit der Option `-G`, diese erwartet eine absolute Liste von Gruppen, die der User angehören soll. Gehört der User einer Gruppe an, die hier nicht genannt ist, wird er aus dieser Gruppen entfernt.
+
+Möchten wir einen User einer Gruppe hinzufügen, die bestehenden Gruppenzugehörigkeiten aber nicht verändern, nutzen wir zusätzlich die Opione `-a` (steht für `--append`).
+
+Damit Gruppenzugehörigkeiten gültig werden, muss die Datei `/etc/group` neu eingelesen werden. Dies geschieht z.B. wenn der Benutzer muss sich neu anmeldet bzw. eine neue Login-Shell startet. 
+
+Um die Gruppenzugehörigkeit in der aktuellen Shell zu aktualisieren, kann auch das Kommando `newgrp <gruppe>` genutzt werden.
+
+## sudo 
+
+Mittels `sudo` (*Superuser do*) können Kommandos als ein anderer Benutzer ausgeführt werden. Standardmässig wird es genutzt, um als normaler Benutzer Root-Rechte zu erlangen, ohne sich als User `root` anmelden zu müssen.
+
+#### Vorteile von `sudo`
+
+- Benutzer gibt sein **eigenes** Passwort ein, nicht das von `root`
+- Passwort von `root` muss nicht geteilt werden (sehr sinnvoll bei mehreren Administratoren)
+- sehr fein granulare Rechtevergabe möglich: z.B. als ein bestimmter Bentuzer nur bestimmte Kommandos ausführen etc.
+- kann auch so konfiuriert werden, dass gar kein Passwort eingegeben werden muss (nur unter ganz bestimmten Bedingungen sinnvoll)
+- das eingegebene Passwort wird für eine gewisse Zeit (15 min) gespeichert und muss nicht immer wieder eingegeben werden und muss nicht immer wieder eingegeben werden
+- alle `sudo` Kommandos werden in `/var/log/autho.log` protokolliert und sind zusätzlich in der History der jeweiligen Benutzer
+- es wird vermieden, dass Benutzer aus Faulheit dauerhaft eine Root-Shell offen haben
+
+#### Nachteile von `sudo`
+- `sudo` ist Software und Software ist **nie fehlerfrei**
+- Sicherheitslücken in `sudo` könnten ausgenutzt werden
+- könnte falsch/unsicher konfiuriert werden
+
+#### Konfiguration
+Generell erfolgt die Konfiguration in der Datei `/etc/sudoers`. Diese sollte **nie direkt** sondern **immer** mit dem Kommando `visudo` bearbeitet werden.
+
+Der einfachste Weg, einem User Root-Rechte mittels `sudo` zu gewähren, besteht darin, diesen User der Gruppe `sudo` bzw. `wheel` (je nach Distribution) hinzuzufügen.
+
+Von einem Eintrag des/der User in die `/etc/sudoers` ist abzuraten, es sei denn, `sudo` soll feiner konfiuriert werden
+
+>[!NOTE] 
+> Falls man das vorherige Kommando erneut mit Root-Rechten ausführen will ist das Kommando `sudo !!` sehr nützlich. 
+> 
+> Das erste `!` steht für die History Expansion, das zweite für das vorherige Kommando.
+
+## Berechtigungen
+
+Berechtigungen in Linux steuern den Zugriff auf Dateien und Verzeichnisse für *Benutzer* und *Gruppen*. Sie legen fest, wer lesen (`r`), schreiben (`w`) und ausführen (`x`) darf.
+
+Der folgende Auszug von `ls -l file1.txt` sagt folgendes aus:
+```bash
+  u  g  o
+-rw-r--r-- 1 tux tux 5 Feb 12 13:09 file1.txt
+```
+- Der User/Besitzer (`u`) darf den Inhalt der Datei lesen und ändern (`rw`)
+- Mitglieder der Gruppe (`g`) dürfen den Inhalt der Datei nur lesen (`r`)
+- Alle anderen Benutzer, die weder der Besitzer, noch Mitglieder der Gruppe sind, dürfen den Inhalt der Datei lesen (`r`)
+
+### Bedeutung der Berechtigungen für Dateien
+
+`r` (*read*) -> Dateiinhalt lesen
+`w` (*write*) -> Dateiinhalt ändern -> aber **nicht** Datei löschen
+`x` (*eXecute*) -> Datei ausführen
+
+### Bedeutung der Berechtigungen für Verzeichnisse
+
+`r` (*read*) -> Verzeichnisinhalt lesen bzw. das Auflisten der Namen der Dateien
+`w` (*write*) -> Verzeichnisinhalt ändern -> Dateien erstellen, verschieben und löschen
+`x` (*eXecute*) -> Verzeichnis betreten 
+
+>[!IMPORTANT] 
+> Es macht **keinen wirklichen Sinn** wenn das *Execute Bit* bei Verzeichnissen **nicht** gesetzt ist. Dann wird alles etwas seltsam... Wir brauchen dieses Bit, damit Verzeichnisse wie gewünscht funktionieren.
+
+### Symbolische Rechtevergabe
+Hierbei werden *Symbole* für die Berechtigungen verwendet. Diese Art der Rechtevergabe ist sehr intuitiv und eignet sich besonders dafür, einzelne Berechtigungen hinzuzufügen oder zu entfernen, ohne die bestehenden Berechtigungen zu verändern. Es ist auch einfach, diese Vorgänge wieder rückgängig zu machen.
+
+#### Symbole
+
+`r` -> read
+`w` -> write
+`x` -> eXecute
+
+`u` -> user/owner
+`g` -> group
+`o` -> others (weder owner noch group)
+`a` -> all
+
+`+` -> hinzufügen
+`-` -> entziehen
+`=` -> setzten
+
+Der Gruppe Schreibrechte hinzufügen:
+```bash
+chmod g+w file1.txt
+```
+Dem Besitzer Leserechte entfernen:
+```bash
+chmod o-r file1.txt
+```
+Besitzer und Gruppe Schreib- und Leserechte
+```bash
+chmod ug+rw file1.txt
+```
+Dem Besitzer Ausführungsrechte hinzufügen, der Gruppe Schreibrechte entziehen, allen anderen Leserechte hinzufügen.
+```bash
+chmod u+x,g-w,o+r file1.txt
+```
+### Numerische/Oktale Rechtevergabe
+Die numerische oder oktale Rechtevergabe verwendet Zahlen des Oktalsystems, um Berechtigungen gleichzeitig für Besitzer, Gruppe und Others zu vergeben. 
+
+Es eignet sich besonders für Situationen, in denen wir eine Datei oder Verzeichnis in einen expliziten Zustand versetzten wollen.
+
+Interessant ist die Herkunft der Zahlen für die Berechtigungen. Übersetzen wir sie doch einmal ins Binärsystem:
+
+| Symbol | Okal | Binär |
+| ------ | ---- | ----- |
+| `r` | `4` | `100` |
+| `w` | `2` | `010` |
+| `x` | `1` | `001` |
+| `-` | `0` | `000` |
+
+Wir sehen, dass das gesetzte Bit *wandert* bzw. sich immer um eine Position verschiebt. Sehen wir uns das einmal im Listing von `ls -l` an:
+```bash
+  7  6  4
+ 111110100
+-rwxr--r-- 1 tux tux 5 Feb 12 13:09 file1.txt
+
+111 -> 7
+110 -> 6
+100 -> 4
+```
+Ist also ein bestimmtes Recht gesetzt, bedeutet dass, das hier binär auch eine `1` steht. Wir sehen sozusagen ein Abbild dessen, was wirklich im Speicher passiert. Toll, oder?
+
+### Sonderbits
+
+Zusätzlich gibt es noch drei Sonderbits, die gewisse Dinge ermöglichen, damit unser System funktioniert:
+
+#### SUID Bit
+
+Auf eine **ausführbare Binärdatei** gesetzt, bewirkt das SUID Bit, dass die Datei mit den Berechtigungen des **Besitzers** der Datei ausgeführt wird und **nicht** mit den Berechtigungen des aufrufenden Users.
 
 
+##### Beispiel `/etc/passwd`
+```bash
+ls -l /usr/bin/passwd
 
+-rwsr-xr-x 1 root root 68248 Feb 24  2025 /usr/bin/passwd
+
+ls -l /etc/shadow
+
+-rw-r----- 1 root shadow 1619 Feb 24 2025 /etc/shadow
+```
+Das Kommando kann also von einem regulären Benutzer ausgeführt werden, läuft dann aber mit den Rechten des Users `root` und kann somit den Inhalt der Datei `/etc/shadow` ändern.
+
+#### SGID Bit
+
+Auf eine **ausführbare Binärdatei** gesetzt, bewirkt das SGID Bit, dass die Datei mit den Berechtigungen der **Gruppe** der Datei ausgeführt wird und **nicht** mit den Berechtigungen des aufrufenden Users.
+
+Auf ein Verzeichnis gesetzt, bewirkt es, dass neu darin erstellte Dateien der Gruppe zugewiesen werden, der das Verzeichnis gehört und nicht der primären Gruppe des erstellenden Users.
+
+```bash
+ls -ld /var/mail
+
+drwxrwsr-x 2 root mail 4096 Feb 20 09:26 /var/mail/
+```
+So werden alle E-Mails der Gruppe `mail` zugeordnet und können vom Mailserver hinzugefügt und auch gelöscht werden.
+
+#### Sticky Bit
+
+Auf ein Verzeichnis gesetzt, bewirkt es, dass darin enthaltene Dateien nur noch vom Besitzer der Datei genändert oder gelöscht werden dürfen.
+```bash
+ls -ld tmp
+
+drwxrwxrwt 8 root root 4096 Feb 20 09:30 /tmp
+```
+So ist es einem regulären Benutzer nicht möglich, Dateien eines anderen Benutzers zu ändern oder zu löschen.
 
 
 
