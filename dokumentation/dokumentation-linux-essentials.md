@@ -1678,7 +1678,7 @@ So werden alle E-Mails der Gruppe `mail` zugeordnet und können vom Mailserver h
 
 #### Sticky Bit
 
-Auf ein Verzeichnis gesetzt, bewirkt es, dass darin enthaltene Dateien nur noch vom Besitzer der Datei genändert oder gelöscht werden dürfen.
+Auf ein Verzeichnis gesetzt, bewirkt es, dass darin enthaltene Dateien nur noch vom Besitzer der Datei geändert oder gelöscht werden dürfen.
 ```bash
 ls -ld tmp
 
@@ -1686,13 +1686,339 @@ drwxrwxrwt 8 root root 4096 Feb 20 09:30 /tmp
 ```
 So ist es einem regulären Benutzer nicht möglich, Dateien eines anderen Benutzers zu ändern oder zu löschen.
 
+## Links
 
+### Symbolische Links / Symlinks
+Sind im Prinzip das Gleiche wie Verknüpfungen unter Windows. Ein Symlink verweist auf eine andere Datei oder gesamtes Verzeichnis, genauer gesagt *auf den Pfad* zu einer Datei oder Verzeichnis. Es ist eine zusätzliche Inode, die auf ein Ziel verweist. Symlinks können auch über Partitionsgrenzen hinaus bestehen. Wird das Original gelöscht, bleibt ein sog. *toter* oder *verwaister* Link zurück, der nicht mehr funktioniert.
+```bash
+ln -s original.txt symlink.txt
+ln -s originalverzeichnis symlinkverzeichnis
+```
+Symlinks werden z.B. von Webservern genutzt: 
+- `/etc/apache2/sites-available` -> alle vorhandenen Konfigurationsdateien für Websites (Original)
+- `/etc/apache2/sites-enabled` -> nur die *aktiven* Konfigurationsdateien für Websites (Symlinks auf Dateien in `sites-available`)
 
+### Hardlinks
+Hardlinks sind eigentlich lediglich Dateinamen. Mehrere Dateinamen bzw. Hardlinks können auf den gleichen Bereich im Speicher bzw. die gleiche Datei/Inode zeigen. Ein Hardlink ist nicht mehr vom Original zu unterscheiden, er hat dieselbe Inode wie das Original. Wird das "Original" gelöscht, ist die Datei weiterhin über den "Link" bzw. jetzt neuen Dateinamen zu erreichen.
 
+Hardlinks funktionieren daher natürlich **nicht** auf Verzeichnisse oder über Partitionsgrenzen hinaus.
+```bash
+ln original.txt hardlink.txt
+```
+Man kann die Anzahl der Hardlinks mit `ls -l` sehen (Spalte direkt nach den Berechtigungen) bzw. in der Ausgabe des Kommandos `stat`:
+```bash
+ln file1.txt hardlink-file1
+ls -l file1.txt
 
+-rw-r--r-- 2 tux tux 5 Feb 12 13:09 file1.txt
+```
+```bash
+stat file1.txt
 
+  File: file1.txt
+  Size: 5         	Blocks: 8          IO Block: 4096   regular file
+Device: 254,1	Inode: 1177496     Links: 2
+Access: (0644/-rw-r--r--)  Uid: ( 1000/     tux)   Gid: ( 1000/     tux)
+Access: 2025-02-17 08:55:39.987803189 +0100
+Modify: 2025-02-12 13:09:04.146349786 +0100
+Change: 2025-02-24 17:31:49.220713220 +0100
+ Birth: 2025-02-12 11:45:38.078409807 +0100
+```
+Hardlinks werden im System verwendet, um Speicherplatz zu sparen z.B. für bestimmte Systemkommandos. Auch nutzen manche Backup Lösungen Hardlinks um inkrementelle Backups zu erstellen.
 
+## Netzwerkkonfiguration
 
+### Netzwerkkonfiguration abfragen
+
+Zur Abfrage und Manipulation der Netzwerkkonfiguration nutzen wir heutzutage das Kommando `ip`. Auf älteren Systemen sind evtl. noch die Tools `ifconfig` und `route` aus dem Paket `net-tools` installiert. Deren Funktionen sind komplett in `ip` enthalten.
+
+### IP-Adressen und Netzwerkinterfaces
+
+```bash
+ip addr show          # zeigt IP-Adressen aller Interfaces
+ip addr show eth0     # nur ein bestimmtes Interface
+ip a                  # Subkommandos können beliebig abgekürzt werden, solange sie weiterhin eindeutig sind
+```
+##### Beispiel-Ausgabe:
+```bash
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host noprefixroute
+       valid_lft forever preferred_lft forever
+2: enp1s0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP group default qlen 1000
+    link/ether 52:54:00:d8:b5:a6 brd ff:ff:ff:ff:ff:ff
+    altname enx525400d8b5a6
+    inet 192.168.100.154/24 brd 192.168.100.255 scope global dynamic noprefixroute enp1s0
+       valid_lft 2193sec preferred_lft 1549sec
+    inet6 fe80::d449:7028:92c:5663/64 scope link
+       valid_lft forever preferred_lft forever
+```
+Wir sehen hier IPv4-Adressen (z.B. 192.168.1.100) und IPv6-Adressen (z.B. fe80::...), Broadcast, CIDR etc.
+
+Auch eine wichtige Information ist `state UP` bzw. `state DOWN`. Einzelne Interfaces könnten auch ausgeschaltet sein (per Soft- oder Hardware).
+
+**Legacy Befehle:**
+```bash
+ifconfig              # zeigt alle Netzwerkinterfaces (veraltet)
+```
+### Routing-Informationen
+
+```bash
+ip route show         # zeigt wie Pakete geroutet werden
+ip route
+ip r
+```
+##### Beispiel-Ausgabe:
+```bash
+default via 192.168.100.1 dev enp1s0 proto dhcp src 192.168.100.154 metric 1002
+192.168.100.0/24 dev enp1s0 proto dhcp scope link src 192.168.100.154 metric 1002
+```
+Das Default-Gateway/Router (`default`) ist hier besonders wichtig - die Adresse, über die wir ins Internet kommen.
+
+Bei Problemen könnten wir also prüfen, ob überhaupt ein Default-Gateway angezeigt wird bzw. ob wir es erreichen/pingen können.
+
+**Legacy:**
+```bash
+route -n              # zeigt Routing-Tabelle
+```
+### System auf offene Ports prüfen
+
+```bash
+ss -tulpn              # schnellere Alternative zu netstat
+```
+
+**Klassisch:**
+```bash
+netstat -tulpn         # zeigt offene Ports und Verbindungen
+```
+Beide Tools zeigen offenen Ports auf dem eigenen System an. Nützlich, um zu schauen, auf welchem Port ein gewisser Dienst lauscht bzw. welche Ports überhaupt offen sind und ggf. geschlossen werden sollten.
+
+Erklärung der Optionen:
+```bash
+-t  # TCP
+-r  # UDP
+-l  # listen
+-p  # Port Number
+-n  # Name des Dienstes (Root-Rechte nötig)
+```
+
+## DNS-Konfiguration
+
+### IP Adresse einer Domain/URL anzeigen
+```bash
+host google.com       # fragt DNS-Server nach IP-Adresse von google.com
+```
+
+### Wichtige Konfigurationsdateien
+
+**/etc/resolv.conf** - DNS-Server-Konfiguration
+```bash
+cat /etc/resolv.conf
+# Zeigt z.B. nameserver-Einträge (DNS-Server)
+nameserver 1.1.1.1
+```
+**/etc/hosts** - Lokale Hostname-Auflösung
+```bash
+cat /etc/hosts
+# Manuelle Zuordnung von Hostnamen zu IP-Adressen
+# Hat Vorrang vor DNS
+# Vorläufer des DNS
+```
+
+### Netzwerkproblem diagnostizieren
+```bash
+# 1. IP-Konfiguration prüfen
+ip a
+
+# 2. Gateway erreichbar?
+ip route
+ping 192.168.1.1  # Gateway-IP
+
+# 3. DNS funktioniert?
+cat /etc/resolv.conf
+host google.com
+
+# 4. Internet erreichbar?
+ping 8.8.8.8      # Google DNS (direkt IP)
+ping google.com   # mit Namensauflösung
+```
+## Archivierung und Komprimierung
+
+### Archivierung mit `tar`
+
+*Archivierung* bezeichnet das Zusammenfassen **mehrerer** Dateien und Verzeichnisse in eine **einzige** Datei, ohne zwingende Kompression. Dadurch bleibt die ursprüngliche Struktur der Dateien erhalten, so können mehrere Dateien einfacher gespeichert oder übertragen werden.
+
+Unter Linux wird das Kommando `tar` (*Tape Archiver*) zur Archivierung verwendet. `tar` ist ein sehr altes Programm und die Syntax (freundlich ausgedrückt) etwas gewöhnungsbedürftig. Kurzoptionen haben oft keine direkte Entsprechung zu den Langoptionen.
+
+Ein `tar`-Archiv kann man sich mit dem Kommando `cat` anzeigen lassen:
+
+![Ausgabe tar Archiv mit cat](./images/ausgabe-tar-archiv-mit-cat.png)
+
+> [!NOTE]
+> Alle numerischen Angaben hier sind im *Oktalformat*. Dies hat historische Gründe. Möchte man den Zeitstempel umrechnen, kann man sich von der BASH helfen lassen:
+> ```bash
+> echo $(( 8#14757403716 ))
+> ```
+
+#### Einige wichtige Optioenen zu `tar`:
+
+>[!NOTE]
+> Bei `tar` ist die Option `-f` sehr wichtig. Damit müssen wir immer den Namen des Archivs angeben, mit dem wir arbeiten wollen. Die Option `-f` erwartet zwingend ein Argument (den Namen/Pfad zu einem Archiv. Der Name muss **direkt** hinter der Option folgen.
+
+**Beispiele:**
+```bash
+tar -cvf archive.tar file1 file2    # korrekt, funktioniert
+tar -tf archive.tar                 # korrekt, funktioniert
+tar -f archive.tar -cv file1 file2  # korrekt, funktioniert
+
+tar -cfv archive.tar file1 file2    # funktioniert NICHT
+tar -ft archive.tar                 # funktioniert NICHT
+```
+##### Archiv aus Dateien erstellen
+```bash
+tar -cf archive.tar file1.txt file2.txt file3.txt 
+tar --create --file archive.tar file1.txt file2.txt file3.txt 
+```
+##### Archiv aus einem Verzeichnis erstellen
+```bash
+tar -cf archive.tar /absolute/path/to/dir
+tar -cf archive.tar relativ/path/to/dir
+```
+> [!NOTE] 
+> Pfadangaben werden immer mit archiviert! Wir müssen uns also im Vorhinein Gedanken machen, ob wir einen relativen oder absoluten Pfad angeben.
+> Geben wir einen relativen Pfad an, so archiviert `tar` den Pfad auch als relativ.
+> Übergeben wir `tar` jedoch einen absoluten Pfad zu einem Verzeichnis (oder einer Datei), entfernt `tar` standardmässig den ersten `/` (`tar: Removing leading '/' from member names`) - `tar` macht also aus einem absoluten Pfad einen relativen Pfad. 
+> So verhindern wir, dass beim extrahieren des Archivs (versehentlich) ein Zielverzeichnis überschrieben wird.
+
+#### Archiv extrahieren
+```bash
+tar -xf archive.tar
+tar --extract --file archive.tar
+```
+#### einzelne Dateien aus Archiv extrahieren
+```bash
+tar -xf archive.tar file1.txt
+tar --extract --file archive.tar file1.txt
+```
+Um einzelne Dateien aus dem Archiv zu extrahieren, geben wir den Dateinamen nach dem Archivnamen an. Die Autocompletion mit Tab funktioniert hier!
+
+#### Die Option -v / --verbose gibt eine Rückmeldung darüber, was tar macht
+```bash
+tar -xvf archive.tar
+tar --extract --verbose --file archive.tar
+```
+#### Inhalt eines Archivs anzeigen/auflisten
+```bash
+tar -tf archiv.tar
+tar --list --file archive.tar
+
+tar -tvf archiv.tar
+tar --list --verbose --file archive.tar
+```
+`-t` steht hier für *Test* - wir testen den Inhalt des Archivs. Übergeben wir hier zusätzlich die Option `-v`, so gibt `tar` zusätzlich die Metainformationen zu einer Datei aus, analog zur Ausgabe von `ls -l`.
+
+#### Datei einem bestehenden Archiv hinzufügen
+```bash
+tar -rf archive.tar other_file.txt
+tar --append --file archive.tar other_file.txt
+```
+### Komprimierung mit `gzip`, `bzip2` und `xz`
+
+Durch die Komprimierung können wir **eine einzelne** Datei mit Hilfe bestimmter Algorithmen (verlustfrei) in ihrer Grösse verkleinern.
+
+*Analogie Komprimierung:* getrocknete Handtücher, die im Wasser wieder gross werden
+
+*Analogie Archivierung:* einzelne Blumen werden zu einem Strauss gebunden
+
+Um **mehrere** Dateien oder ganze Verzeichnisse zu komprimieren, müssen wir zusätzlich im Vorfeld die *Archivierung* anwenden. Bestimmte Programme in Windows-Systemen vereinen diese beiden Konzepte unter einer Haube. Wir müssen uns jedoch merken, dass dies grundsätzlich zwei komplett verschiedene Konzepte sind.
+
+Auch unter Linux ist es möglich beide Schritte auf einmal mit dem Kommando `tar` durchzuführen, dabei ruft `tar` im Hintergrund jedoch die jeweiligen Kommandos zur Komprimierung auf.
+
+Unter Linux nutzen wir standardmässig drei verschiedene Tools zur Komprimierung: `gzip`, `bzip2` und `xz`.
+
+>[!NOTE]
+> Sowohl bei der Komprimierung als auch bei der Dekomprimierung wird die jeweilige Originaldatei nicht behalten, sondern ersetzt.
+> Dies können wir mit der Option `-k` (`--keep`) umgehen.
+
+### Vergleich der drei Komprimierungsalgorithmen
+
+Vergleich der Geschwindigkeiten und resultierenden Grössen beim Komprimieren:
+
+![vergleich-komprimierung](./images/vergleich-komprimierung.png)
+Vergleich der Geschwindigkeiten beim Dekomprimieren:
+
+![vergleich-dekomprimierung](./images/vergleich-dekomprimierung.png)
+Zusammenfassend lassen sich folgende Aussagen über die drei Komprimierungsalgorithmen treffen:
+
+- `gzip` ist am schnellsten bei der Komprimierung, die komprimierte Datei ist aber nicht besonders klein
+- `bzip2` braucht lange für die Komprimierung und die Dekomprimierung, erzeugt aber eine ziemlich kleine Datei
+- `xz` braucht ziemlich lange bei der Komprimierung, liegt bei der Kompressionsrate zwischen den beiden anderen, ist aber sehr schnell bei der Dekomprimierung
+
+Es gibt also für alle drei bestimmte Anwendungsfälle, in denen sie ihre Stärken ausspielen können.
+
+>[!NOTE] 
+>Unser Beispiel begünstigt ältere Komprimierungsalgorithmen. In einem echten Beispiel würde `xz` auch die höchste Kompressionsrate erzielen. `xz` ist besonders auf die Komprimierung von Quellcode optimiert. Das schnellste Tool ist immer noch `gzip`, allerdings mit der "schlechtesten" Kompressionsrate.
+
+### Erstellen und Entpacken eines komprimierten Archivs direkt mit `tar`
+
+#### gzip komprimiertes Archiv erstellen
+```bash
+tar -czf archiv.tar.gz somdir/
+tar -czvf archiv.tar.gz somdir/     # verboser Output
+```
+`-z` ruft also `gzip` auf
+
+#### bzip2 komprimiertes Archiv erstellen
+```bash
+tar -cjf archiv.tar.bz2 somdir/
+tar -czjf archiv.tar.bz2 somdir/     # verboser Output
+```
+`-j` ruft also `bzip2` auf
+
+#### xz komprimiertes Archiv erstellen
+```bash
+tar -cJf archiv.tar.xz somdir/
+tar -cJvf archiv.tar.xz somdir/     # verboser Output
+```
+`-J` ruft also `xz` auf
+
+#### Komprimiertes Archiv entpacken
+##### mit gzip komprimiertes Archiv entpacken
+```bash
+tar -xzf archiv.tar.gz
+tar -xzvf archiv.tar.gz
+```
+##### mit bzip2 komprimiertes Archiv entpacken
+```bash
+tar -xjf archiv.tar.bz2
+tar -xzjf archiv.tar.bz2
+```
+##### mit xz komprimiertes Archiv entpacken
+```bash
+tar -xJf archiv.tar.xz
+tar -xJvf archiv.tar.xz
+```
+##### automatisch jeweiligen Algorithmus ermitteln, Archiv dekomprimieren und Dateien extrahieren
+```bash
+tar -xf archiv.tar.gz
+tar -xf archiv.tar.bz2
+tar -xf archiv.tar.xz
+```
+
+>[!NOTE]
+> Aktuelle Versionen von `tar` erkennen beim Extrahieren den verwendeten Komprimierungsalgorithmus automatisch (auch unabhängig von der Dateiendung). Dieser braucht also nicht zwingend mit angegeben zu werden. 
+
+#### Erklärung der Optionen:
+
+- `-c`, `--create`  erstellt ein neues Archiv
+- `-x`, `--extract`  entpackt ein Archiv
+- `-f`, `--file`  gibt den Dateinamen des Archivs an (immer direkt danach)
+ 
+- `-z`, `--gzip`  wendet gzip-Kompression an
+- `-j`, `--bzip2`  wendet bzip2-Kompression an
+- `-J`, `--xz`  wendet xz-Kompression an
 
 
 
