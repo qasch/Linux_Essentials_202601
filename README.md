@@ -25,9 +25,9 @@
     - [x] ps, top, free
     - [ ] syslog, dmesg
     - [x] FHS
-  - [ ] 6.4.4	4.4 Your Computer on the Network (weight: 2)
-- [ ] 6.5	Topic 5: Security and File Permissions
-  - [ ] 6.5.1	5.1 Basic Security and Identifying User Types (weight: 2)
-  - [ ] 6.5.2	5.2 Creating Users and Groups (weight: 2)
-  - [ ] 6.5.3	5.3 Managing File Permissions and Ownership (weight: 2)
-  - [ ] 6.5.4	5.4 Special Directories and Files (weight: 1)
+  - [x] 6.4.4	4.4 Your Computer on the Network (weight: 2)
+- [x] 6.5	Topic 5: Security and File Permissions
+  - [x] 6.5.1	5.1 Basic Security and Identifying User Types (weight: 2)
+  - [x] 6.5.2	5.2 Creating Users and Groups (weight: 2)
+  - [x] 6.5.3	5.3 Managing File Permissions and Ownership (weight: 2)
+  - [x] 6.5.4	5.4 Special Directories and Files (weight: 1)
